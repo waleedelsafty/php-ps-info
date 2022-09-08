@@ -1,39 +1,34 @@
 <?php
+require_once 'vendor/autoload.php';
+$kernel = new AppKernel(_PS_MODE_DEV_?'dev':'prod', _PS_MODE_DEV_);
+define('_MY_PS_VERSION_', $kernel::VERSION);
 
 class PhpPsInfo
 {
-    protected $login;
-    protected $password;
-
-    const DEFAULT_PASSWORD = 'prestashop';
-    const DEFAULT_LOGIN = 'prestashop';
 
     const TYPE_OK = true;
     const TYPE_ERROR = false;
     const TYPE_WARNING = null;
-
     protected $requirements = [
         'versions' => [
-            'php' => '7.1',
+            'php' => '5.6',
             'mysql' => '5.5',
         ],
         'extensions' => [
-            'bcmath' => false,
             'curl' => true,
             'dom' => true,
             'fileinfo' => true,
             'gd' => true,
-            'iconv' => true,
             'imagick' => false,
             'intl' => true,
             'json' => true,
+            'openssl' => true,
             'mbstring' => true,
             'memcache' => false,
             'memcached' => false,
-            'openssl' => true,
             'pdo_mysql' => true,
-            'simplexml' => true,
             'zip' => true,
+            'bcmath' => false,
         ],
         'config' => [
             'allow_url_fopen' => true,
@@ -56,40 +51,35 @@ class PhpPsInfo
             'translations_dir' => 'translations',
             'customizable_products_dir' => 'upload',
             'virtual_products_dir' => 'download',
-            'override_dir' => 'override',
             'config_sf2_dir' => 'app/config',
             'translations_sf2' => 'app/Resources/translations',
         ],
         'apache_modules' => [
-            'mod_alias' => false,
-            'mod_env' => false,
-            'mod_headers' => false,
-            'mod_rewrite' => false,
+            'mod_rewrite' => true,
         ],
     ];
 
     protected $recommended = [
         'versions' => [
-            'php' => '7.4',
+            'php' => '7.1',
             'mysql' => '5.6',
+            'prestashop'=> 'PRESTA_VERSION',
         ],
         'extensions' => [
-            'bcmath' => true,
             'curl' => true,
             'dom' => true,
             'fileinfo' => true,
             'gd' => true,
-            'iconv' => true,
             'imagick' => true,
             'intl' => true,
             'json' => true,
+            'openssl' => true,
             'mbstring' => true,
             'memcache' => false,
             'memcached' => true,
-            'openssl' => true,
             'pdo_mysql' => true,
-            'simplexml' => true,
             'zip' => true,
+            'bcmath' => true,
         ],
         'config' => [
             'allow_url_fopen' => true,
@@ -104,9 +94,6 @@ class PhpPsInfo
             'upload_max_filesize' => '128M',
         ],
         'apache_modules' => [
-            'mod_alias' => false,
-            'mod_env' => true,
-            'mod_headers' => true,
             'mod_rewrite' => true,
         ],
     ];
@@ -121,41 +108,12 @@ class PhpPsInfo
      * @param string $password Password
      *
      */
-    public function __construct($login = self::DEFAULT_LOGIN, $password = self::DEFAULT_PASSWORD)
+    public function __construct()
     {
-        if (!empty($_SERVER['PS_INFO_LOGIN'])) {
-            $this->login = $_SERVER['PS_INFO_LOGIN'];
-        }
 
-        if (!empty($_SERVER['PS_INFO_PASSWORD'])) {
-            $this->password = $_SERVER['PS_INFO_PASSWORD'];
-        }
-
-        $this->login = !empty($login) ? $login : $this->login;
-        $this->password = !empty($password) ? $password : $this->password;
     }
 
-    /**
-     * Check authentication if not in cli and have a login
-     */
-    public function checkAuth()
-    {
-        if (PHP_SAPI === 'cli' ||
-            empty($this->login)
-        ) {
-            return;
-        }
 
-        if (!isset($_SERVER['PHP_AUTH_USER']) ||
-            $_SERVER['PHP_AUTH_PW'] != $this->password ||
-            $_SERVER['PHP_AUTH_USER'] != $this->login
-        ) {
-            header('WWW-Authenticate: Basic realm="Authentification"');
-            header('HTTP/1.0 401 Unauthorized');
-            echo '401 Unauthorized';
-            exit(401);
-        }
-    }
 
     /**
      * Get versions data
@@ -171,6 +129,7 @@ class PhpPsInfo
                 'CGI with Apache Worker or another webserver' :
                 'Apache Module (low performance)'
             ],
+            'Prestashop Version' =>[_MY_PS_VERSION_]
         ];
 
         $data['PHP Version'] = [
@@ -224,7 +183,6 @@ class PhpPsInfo
             'Client URL Library (Curl)' => 'curl',
             'Image Processing and GD' => 'gd',
             'Image Processing (ImageMagick)' => 'imagick',
-            'Human Language and Character Encoding Support (Iconv)' => 'iconv',
             'Internationalization Functions (Intl)' => 'intl',
             'Memcache' => 'memcache',
             'Memcached' => 'memcached',
@@ -233,7 +191,6 @@ class PhpPsInfo
             'File Information (Fileinfo)' => 'fileinfo',
             'JavaScript Object Notation (Json)' => 'json',
             'PDO and MySQL Functions' => 'pdo_mysql',
-            'SimpleXML' => 'simplexml',
         ];
         foreach ($vars as $label => $var) {
             $value = extension_loaded($var);
@@ -364,19 +321,17 @@ class PhpPsInfo
      * Convert PHP variable (G/M/K) to bytes
      * Source: http://php.net/manual/fr/function.ini-get.php
      *
-     * @param mixed $value
-     *
      * @return integer
      */
-    public function toBytes($value)
+    public function toBytes($val)
     {
-        if (is_numeric($value)) {
-            return $value;
+        if (is_numeric($val)) {
+            return $val;
         }
 
-        $value = trim($value);
-        $val = (int) $value;
-        switch (strtolower($value[strlen($value)-1])) {
+        $val = trim($val);
+        $val = (int) $val;
+        switch (strtolower($val[strlen($val)-1])) {
             case 'g':
                 $val *= 1024;
                 // continue
@@ -508,7 +463,7 @@ class PhpPsInfo
 
 // Init render
 $info = new PhpPsInfo();
-$info->checkAuth();
+
 ?>
 <!doctype html>
 <html lang="en">
@@ -666,8 +621,5 @@ $info->checkAuth();
             </div>
         </div>
 
-        <footer class="footer-copyright text-center py-3">
-            © <?php echo date('Y') ?> Copyright: <a href="https://prestashop.com/">PrestaShop</a>
-        </footer>
     </body>
 </html>
